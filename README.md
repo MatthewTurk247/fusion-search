@@ -1,3 +1,3 @@
 # FusionSearch
 
-A description of this package.
+Fuzzy search through properties of anything in Swift that conforms to `AnyObject`
