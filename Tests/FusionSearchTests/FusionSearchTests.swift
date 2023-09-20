@@ -28,17 +28,39 @@ final class FusionSearchTests: XCTestCase {
     }
     
     func testPersonEmptyDefaultKeyPaths() throws {
+        let searcher = Fusion(people)
         // searcher.search(for: "Bob")
     }
     
-    func testEncodings() {
+    func testUnicodeFuzzyMatch() {
         let fusion = Fusion(people, foldingOptions: [.caseInsensitive, .diacriticInsensitive])
-        print("öçpé".folding(options: .diacriticInsensitive, locale: .current))
-        print(fusion.unicodeFuzzyMatch("👁️👄👁️", "👁️🫦👁️"))
-        print(fusion.unicodeFuzzyMatch("Nearest café", "According to this map, the nearest café is 1.2 miles away."))
-        print(fusion.unicodeFuzzyMatch("Nearest cafe", "According to this map, the nearest café is 1.2 miles away."))
-        print(fusion.unicodeFuzzyMatch("café", "D\u{2019}après cette carte, le café le plus proche se trouve à 2 km."))
-        print(fusion.unicodeFuzzyMatch("öçpé", "ocpe"))
-        print(fusion.unicodeFuzzyMatch("ocpe", "öçpé"))
+        let parameters: [String: [String: Bool]] = [
+            "👁️👄👁️": ["👁️🫦👁️": true],
+            "Nearest café": ["According to this map, the nearest café is 1.2 miles away.": true],
+            "Nearest cafe": ["According to this map, the nearest café is 1.2 miles away.": true],
+            "öçpé": ["ocpe": true],
+            "ocpe": ["öçpé": true],
+            "café": ["D\u{2019}après cette carte, le café le plus proche se trouve à 2 km.": true],
+            "coffee": ["D\u{2019}après cette carte, le café le plus proche se trouve à 2 km.": false],
+            "wheat": ["D\u{2019}après cette carte, le café le plus proche se trouve à 2 km.": false]
+
+        ]
+        
+        for (query, target) in parameters {
+            // Maybe a tuple or something else will do instead.
+            let answer = target.values.first!
+            let targetString = target.keys.first!
+            let computedAnswer = fusion.unicodeFuzzyMatch(query, targetString)
+            
+            if answer {
+                XCTAssert(computedAnswer)
+            } else {
+                XCTAssertFalse(computedAnswer)
+            }
+        }
+    }
+    
+    func testASCIIViolation() {
+        
     }
 }

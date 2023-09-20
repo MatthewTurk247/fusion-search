@@ -9,11 +9,18 @@ public class Fusion<T: AnyObject> {
     
     public private(set) var encoding: String.Encoding
     public var foldingOptions: String.CompareOptions
+    public var bitErrorLimit: Int
     
-    public init(_ data: [T], foldingOptions: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive], asciiOnly: Bool = false) {
+    public init(
+        _ data: [T],
+        foldingOptions: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive],
+        asciiOnly: Bool = false,
+        bitErrorLimit: Int = 2
+    ) {
         self.data = data
         self.foldingOptions = foldingOptions
         self.encoding = asciiOnly ? .ascii : .unicode
+        self.bitErrorLimit = bitErrorLimit
     }
     
     func search(for term: String) -> [T] {
@@ -30,7 +37,7 @@ public class Fusion<T: AnyObject> {
         return data.filter { self.fuzzyMatch(term, $0[keyPath: keyPath]) }
     }
     
-    func asciiFuzzyMatch(_ searchTerm: String, _ targetString: String) -> Bool {
+    internal func asciiFuzzyMatch(_ searchTerm: String, _ targetString: String) -> Bool {
         // Normalize the strings according to `foldingOptions`.
         let normalizedSearchTerm = normalizedString(searchTerm)
         let normalizedTargetString = normalizedString(targetString)
@@ -74,11 +81,10 @@ public class Fusion<T: AnyObject> {
         return false // No match was found.
     }
     
-    func unicodeFuzzyMatch(_ searchTerm: String, _ targetString: String) -> Bool {
+    internal func unicodeFuzzyMatch(_ searchTerm: String, _ targetString: String) -> Bool {
         // Normalize the strings according to `foldingOptions`.
         let normalizedSearchTerm = normalizedString(searchTerm)
         let normalizedTargetString = normalizedString(targetString)
-        print(normalizedSearchTerm, normalizedTargetString)
 
         let hammingDistance = 2
         
@@ -114,8 +120,10 @@ public class Fusion<T: AnyObject> {
         
         return false // No match was found.
     }
+}
 
-    private func normalizedString(_ str: String) -> String {
+private extension Fusion {
+    func normalizedString(_ str: String) -> String {
         return str.folding(options: foldingOptions, locale: .current)
     }
     
