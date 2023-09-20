@@ -1,16 +1,16 @@
 import Foundation
 
-public class Fusion<T: AnyObject> {
-    let data: [T] // Fuzzy search space.
-    let queryByteLimit: Int = 64
-    var defaultKeyPaths: [KeyPath<T, String>] = []
+public class Fusion<T> {
+    private let data: [T] // Fuzzy search space.
+    private let queryByteLimit: Int = 64
+    public var defaultKeyPaths: [KeyPath<T, String>] = []
         
-    private(set) var encoding: String.Encoding
-    var foldingOptions: String.CompareOptions
+    public private(set) var encoding: String.Encoding
+    public var foldingOptions: String.CompareOptions
     // Maximum number of allowed bit flip errors (i.e., Hamming distance).
-    var bitErrorLimit: Int
+    public var bitErrorLimit: Int
     
-    init(
+    public init(
         _ data: [T],
         foldingOptions: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive],
         asciiOnly: Bool = false,
@@ -22,18 +22,23 @@ public class Fusion<T: AnyObject> {
         self.bitErrorLimit = bitErrorLimit
     }
     
-    func search(for term: String) -> [T] {
+    public func search(for term: String) -> [T] {
         assert(!defaultKeyPaths.isEmpty, "Value for 'defaultKeyPaths' in Fusion instance is an empty array")
         return defaultKeyPaths.reduce([], { $0 + self.search(for: term, through: $1) })
     }
     
-    func search(for term: String, through keyPaths: [KeyPath<T, String>]) -> [T] {
+    public func search(for term: String, through keyPaths: [KeyPath<T, String>]) -> [T] {
         return keyPaths.reduce([], { $0 + self.search(for: term, through: $1) })
     }
     
-    func search(for term: String, through keyPath: KeyPath<T, String>) -> [T] {
+    public func search(for term: String, through keyPath: KeyPath<T, String>) -> [T] {
         assert(term.lengthOfBytes(using: encoding) <= queryByteLimit, "Search currently does not support terms with size greater than 64 bytes")
         return data.filter { self.fuzzyMatch(term, $0[keyPath: keyPath]) }
+    }
+    
+    @available(macOS 13.0, *)
+    public func match(pattern: Regex<AnyRegexOutput>, through keyPath: KeyPath<T, String>) -> [T] {
+        return data.filter { (try? pattern.firstMatch(in: $0[keyPath: keyPath])) != nil }
     }
     
     internal func asciiFuzzyMatch(_ searchTerm: String, _ targetString: String) -> Bool {

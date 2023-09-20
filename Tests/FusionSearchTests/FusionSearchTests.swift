@@ -1,5 +1,7 @@
 import XCTest
 @testable import FusionSearch
+import AVFAudio
+import MediaAccessibility
 
 class Person {
     let name: String
@@ -43,7 +45,6 @@ final class FusionSearchTests: XCTestCase {
             "café": ["D\u{2019}après cette carte, le café le plus proche se trouve à 2 km.": true],
             "coffee": ["D\u{2019}après cette carte, le café le plus proche se trouve à 2 km.": false],
             "wheat": ["D\u{2019}après cette carte, le café le plus proche se trouve à 2 km.": false]
-
         ]
         
         for (query, target) in parameters {
@@ -58,9 +59,5 @@ final class FusionSearchTests: XCTestCase {
                 XCTAssertFalse(computedAnswer)
             }
         }
-    }
-    
-    func testASCIIViolation() {
-        
     }
 }
