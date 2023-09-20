@@ -3,15 +3,14 @@ import Foundation
 public class Fusion<T: AnyObject> {
     let data: [T] // Fuzzy search space.
     let queryByteLimit: Int = 64
-    public var defaultKeyPaths: [KeyPath<T, String>] = []
+    var defaultKeyPaths: [KeyPath<T, String>] = []
+        
+    private(set) var encoding: String.Encoding
+    var foldingOptions: String.CompareOptions
+    // Maximum number of allowed bit flip errors (i.e., Hamming distance).
+    var bitErrorLimit: Int
     
-    // TODO: Add option for error tolerance.
-    
-    public private(set) var encoding: String.Encoding
-    public var foldingOptions: String.CompareOptions
-    public var bitErrorLimit: Int
-    
-    public init(
+    init(
         _ data: [T],
         foldingOptions: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive],
         asciiOnly: Bool = false,
@@ -41,12 +40,10 @@ public class Fusion<T: AnyObject> {
         // Normalize the strings according to `foldingOptions`.
         let normalizedSearchTerm = normalizedString(searchTerm)
         let normalizedTargetString = normalizedString(targetString)
-        // Maximum number of allowed errors.
-        let hammingDistance = 2
         
         // Initialize an array to store the bit representation of the current state.
         // Each element represents the state for a given error level.
-        var currentState = Array<UInt64>(repeating: ~1, count: hammingDistance + 1)
+        var currentState = Array<UInt64>(repeating: ~1, count: bitErrorLimit + 1)
         
         // Initialize an array to store the bitmask for each character in the ASCII table.
         // This will be used to quickly check if a character is in the search term.
@@ -66,14 +63,14 @@ public class Fusion<T: AnyObject> {
             currentState[0] <<= 1
             
             // Update the state for each error level.
-            for errorLevel in 1...hammingDistance {
+            for errorLevel in 1...bitErrorLimit {
                 let temp = currentState[errorLevel]
                 currentState[errorLevel] = (previousStateForErrorLevel & (currentState[errorLevel] | characterBitmask[Int(currentChar.asciiValue!)])) << 1
                 previousStateForErrorLevel = temp
             }
             
             // Check if a match has been found with a number of errors less than or equal to the Hamming distance.
-            if currentState[hammingDistance] & (1 << normalizedSearchTerm.count) == 0 {
+            if currentState[bitErrorLimit] & (1 << normalizedSearchTerm.count) == 0 {
                 return true
             }
         }
@@ -85,10 +82,8 @@ public class Fusion<T: AnyObject> {
         // Normalize the strings according to `foldingOptions`.
         let normalizedSearchTerm = normalizedString(searchTerm)
         let normalizedTargetString = normalizedString(targetString)
-
-        let hammingDistance = 2
         
-        var currentState = Array<UInt>(repeating: ~1, count: hammingDistance + 1)
+        var currentState = Array<UInt>(repeating: ~1, count: bitErrorLimit + 1)
         
         // Initialize a dictionary to store the bitmask for each Unicode scalar.
         var characterBitmask: [UInt32: UInt] = [:]
@@ -107,13 +102,13 @@ public class Fusion<T: AnyObject> {
             currentState[0] |= characterBitmask[unicodeValue, default: ~0]
             currentState[0] <<= 1
             
-            for errorLevel in 1...hammingDistance {
+            for errorLevel in 1...bitErrorLimit {
                 let temp = currentState[errorLevel]
                 currentState[errorLevel] = (previousStateForErrorLevel & (currentState[errorLevel] | characterBitmask[unicodeValue, default: ~0])) << 1
                 previousStateForErrorLevel = temp
             }
             
-            if currentState[hammingDistance] & (1 << normalizedSearchTerm.count) == 0 {
+            if currentState[bitErrorLimit] & (1 << normalizedSearchTerm.count) == 0 {
                 return true
             }
         }
